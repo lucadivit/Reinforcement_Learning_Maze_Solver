@@ -51,9 +51,8 @@ def train_qLearning_agent(num_mazes, num_episodes, time_from_ep, time_from_maze)
     qLearningAgent = QLearningAgent(actions, policy)
     file = open("q_learning_agent_" + results_file_name, "w")
     q_info = open("q_learning_agent_" + q_info_file_name, "w")
-    env.initialize_env()
     for j in range(0, num_mazes):
-        env.hard_reset()
+        env.initialize_env()
         rewards_avg = []
         steps_avg = []
         for i in range(0, num_episodes):
@@ -79,13 +78,12 @@ def train_qLearning_agent(num_mazes, num_episodes, time_from_ep, time_from_maze)
             rewards_avg.append(avg_reward)
             steps_avg.append(sum(steps)/float(len(steps)))
             time.sleep(time_from_maze)
-        plot_infos(rewards_avg, steps_avg, j)
+        #plot_infos(rewards_avg, steps_avg, j)
 
     file.close()
     q_info.close()
 
 def main():
     train_qLearning_agent(2, 100, 0.05, 1)
-    pass
 
 main()

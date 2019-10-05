@@ -1,4 +1,4 @@
-import os, subprocess, time, signal, random
+import os, subprocess, time, signal, random, sys
 import gym
 from gym import error, spaces
 from gym import utils
@@ -15,6 +15,11 @@ class MazeEnv(gym.Env):
     initialized = False
     maze_dimensions = None
     max_steps = None
+    walls_door = None
+    player_start_pos = None
+    player_marker_position_standard = [1, 1]
+    player_start_pos_random = 'random'
+    player_start_pos_standard = 'standard'
 
     def __init__(self):
         self.action_space = spaces.Discrete(4) #Su, giu, destra, sinistra
@@ -22,15 +27,25 @@ class MazeEnv(gym.Env):
         self.observation_space = spaces.Box(np.array([np.iinfo(np.uint8).min, np.iinfo(np.uint8).min, np.iinfo(np.uint8).min, np.iinfo(np.uint8).min,
                                                       np.iinfo(np.uint8).min, np.iinfo(np.uint8).min]), np.array([np.iinfo(np.uint8).max, np.iinfo(np.uint8).max,
                                                       np.iinfo(np.uint8).max, np.iinfo(np.uint8).max, np.iinfo(np.uint8).max, np.iinfo(np.uint8).max]), dtype=np.uint8)
-        self.num_movements = 0
-        self.player_marker_position = [1, 1]
+        self.player_marker_start_pos = None
+        self.player_marker_position = [None, None]
 
-    def initialize_env(self, dimensions = 10, max_steps = 2000):
+    def initialize_env(self, dimensions = 10, max_steps = 2000, walls_door = 2, player_start_pos = 'standard'):
+        assert dimensions >= 5, "La dimensione minima consentita e' 5."
+        assert max_steps > 100, "Il minimo numero di passi consentito e' 100."
+        assert walls_door >= 1, "Il numero minimo di porte consentito e' 1."
+        assert walls_door <= dimensions - 2, "Il massimo numero di porte consentite e' dimensione - 2."
+        assert player_start_pos == self.player_start_pos_standard or player_start_pos == self.player_start_pos_random, "Valori validi per player_start_pos sono standard o random"
         self.maze_dimensions = dimensions
         self.max_steps = max_steps
+        self.walls_door = walls_door
+        self.player_start_pos = player_start_pos
         self.maze = np.array(self.create_maze(self.maze_dimensions))
         self.objective_position = self.add_objective_marker(None)
-        self.add_player_marker(self.player_marker_position)
+        self.player_marker_start_pos = tuple(self.add_player_marker(None))
+        self.player_marker_position[0] = self.player_marker_start_pos[0]
+        self.player_marker_position[1] = self.player_marker_start_pos[1]
+        self.num_movements = 0
         self.initialized = True
 
     def step(self, action):
@@ -119,22 +134,13 @@ class MazeEnv(gym.Env):
         else:
             return [x_pos, y_pos, up_square, down_square, left_square, right_square], reward, done, {"num_steps": self.num_movements}
 
-    '''Reset the enviroment and create a new maze. Keep the q-table'''
-    def hard_reset(self):
-        assert self.initialized is True, "Initialize env with initilize_env() function before call hard_reset() method."
-        self.num_movements = 0
-        self.maze = np.array(self.create_maze(self.maze_dimensions))
-        state, reward, done, num_movements = self.reset()
-        self.objective_position = self.add_objective_marker(None)
-        return state, reward, done, num_movements
-
     '''Reset the enviroment but the maze is the same. Keep the q-table'''
     def reset(self):
         assert self.initialized is True, "Initialize env with initilize_env() function before call reset() method."
         self.num_movements = 0
+        #Clean position
         self.maze[self.player_marker_position[1]][self.player_marker_position[0]] = self.free_square
-        self.player_marker_position = [1, 1]
-        self.add_player_marker(self.player_marker_position)
+        self.player_marker_position = self.add_player_marker([self.player_marker_start_pos[0],self.player_marker_start_pos[1]])
         self.print_maze()
         y_pos = self.player_marker_position[1]
         x_pos = self.player_marker_position[0]
@@ -152,24 +158,44 @@ class MazeEnv(gym.Env):
 
     def create_maze(self, dimensions):
 
-        def add_wall_inside(maze, dimensions):
+        def add_door(maze, dimensions, col_start):
             dimensions = dimensions - 1
-            first_col = [True, False]
-            first_col_free = random.choice(first_col) #True: free, False: wall
-            if(first_col_free is False):
-                for col in range(1, dimensions):
+            if (col_start % 2 != 0):
+                for col in range(col_start, dimensions):
+                    if(col % 2 != 0):
+                        door_count = 0
+                        while(door_count < self.walls_door):
+                            for _ in range(0, self.walls_door):
+                                i = random.randint(1, dimensions - 1)
+                                j = col
+                                if(maze[i][j] == self.wall_marker):
+                                    maze[i][j] = self.free_square
+                                    door_count += 1
+            else:
+                for col in range(col_start, dimensions):
+                    if (col % 2 == 0):
+                        door_count = 0
+                        while (door_count < self.walls_door):
+                            for _ in range(0, self.walls_door):
+                                i = random.randint(1, dimensions - 1)
+                                j = col
+                                if (maze[i][j] == self.wall_marker):
+                                    maze[i][j] = self.free_square
+                                    door_count += 1
+            return maze
+
+        def add_wall_inside(maze, dimensions, col_start):
+            dimensions = dimensions - 1
+            if(col_start % 2 != 0):
+                for col in range(col_start, dimensions):
                     for row in range(1, dimensions):
                         if(col % 2 != 0):
                             maze[row][col] = self.wall_marker
-                    if(col % 2 != 0):
-                        maze[random.randint(1, dimensions)][col] = self.free_square
             else:
-                for col in range(2, dimensions):
+                for col in range(col_start, dimensions):
                     for row in range(1, dimensions):
                         if (col % 2 == 0):
                             maze[row][col] = self.wall_marker
-                    if (col % 2 == 0):
-                        maze[random.randint(1, dimensions)][col] = self.free_square
             return maze
 
         maze = []
@@ -186,14 +212,35 @@ class MazeEnv(gym.Env):
                     else:
                         row.append(self.free_square)
                 maze.append(row)
-        maze = add_wall_inside(maze, dimensions)
+        col_start = random.randint(1,2)
+        maze = add_wall_inside(maze, dimensions, col_start)
+        maze = add_door(maze, dimensions, col_start)
         return maze
 
     def add_player_marker(self, marker_position):
-        self.player_marker_position[0] = marker_position[0]
-        self.player_marker_position[1] = marker_position[1]
-        self.maze[marker_position[1]][marker_position[0]] = self.player_marker
-        return [self.player_marker_position[0], self.player_marker_position[1]]
+        pos = marker_position
+        if(marker_position is not None):
+            if((marker_position[0] > self.maze.shape[0] - 1) or (marker_position[0] < 1)):
+                print("Posizione Marker non valida")
+                sys.exit(0)
+            elif((marker_position[1] > self.maze.shape[0] - 1) or (marker_position[1] < 1)):
+                print("Posizione Marker non valida")
+                sys.exit(0)
+            else:
+                self.maze[marker_position[1]][marker_position[0]] = self.player_marker
+        else:
+            if(self.player_start_pos == self.player_start_pos_standard):
+                self.maze[self.player_marker_position_standard[1]][self.player_marker_position_standard[0]] = self.player_marker
+                pos = [self.player_marker_position_standard[0], self.player_marker_position_standard[1]]
+            elif(self.player_start_pos == self.player_start_pos_random):
+                i = random.randint(1, self.maze.shape[0] - 2)
+                j = random.randint(1, self.maze.shape[0] - 2)
+                self.maze[i][j] = self.player_marker
+                pos = [j,i]
+            else:
+                self.maze[self.player_marker_position_standard[1]][self.player_marker_position_standard[0]] = self.player_marker
+                pos = [self.player_marker_position_standard[0], self.player_marker_position_standard[1]]
+        return pos
 
     def add_objective_marker(self, objective_pos):
 
@@ -216,8 +263,10 @@ class MazeEnv(gym.Env):
         else:
             if (self.maze[objective_pos[1]][objective_pos[0]] == self.wall_marker):
                 print("Obiettivo non aggiunto")
+                sys.exit(0)
             elif (self.maze[objective_pos[1]][objective_pos[0]] == self.player_marker):
                 print("Obiettivo non aggiunto")
+                sys.exit(0)
             else:
                 self.maze[objective_pos[1]][objective_pos[0]] = self.objective_marker
             return objective_pos
