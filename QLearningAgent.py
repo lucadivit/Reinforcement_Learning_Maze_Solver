@@ -1,14 +1,19 @@
-import random
+import random, time
 
 
 class QLearningAgent:
 
-    def __init__(self, actions, policy, alpha=0.2, gamma=0.9):
+    def __init__(self, env,  policy, number_of_episodes, alpha=0.2, gamma=0.9):
+        assert number_of_episodes > 0, "number_of_episodes non valido"
+        assert alpha >= 0, "alpha non valido"
+        assert 0 <= gamma < 1, "gamma non valido"
         self.q_table = {}
         self.alpha = alpha
         self.gamma = gamma
-        self.actions = actions
+        self.env = env
+        self.actions = [i for i in range(0, self.env.get_action_space().n)]
         self.policy = policy
+        self.nb_episodes = number_of_episodes
 
     def add_q_value(self, state, action, q_value):
         self.q_table[(tuple(state), action)] = q_value
@@ -35,6 +40,28 @@ class QLearningAgent:
         q_list = [self.get_q_value(state, action) for action in self.actions]
         action = self.policy.compute_action(q_list)
         return action
+
+    def start_training(self, time_between_step=1, time_between_episode=1):
+        self.env.initialize_env()
+        res = []
+        for i in range(0, self.nb_episodes):
+            rewards = []
+            infos = []
+            print("Started episode ", i)
+            time.sleep(time_between_episode)
+            state, reward, done, info = self.env.reset()
+            rewards.append(reward)
+            infos.append(info)
+            while (done is False):
+                action = self.choose_action(state)
+                new_state, reward, done, info = self.env.step(action)
+                self.learn(state, action, reward, new_state, done)
+                state = new_state
+                rewards.append(reward)
+                infos.append(info)
+                time.sleep(time_between_step)
+            res.append([rewards, infos])
+        return res
 
     def get_q_table(self):
         return self.q_table

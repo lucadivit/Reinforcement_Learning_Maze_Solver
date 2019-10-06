@@ -1,15 +1,19 @@
-import random
+import random, time
 
 
 class EGreedyPolicy:
 
-    def __init__(self, actions, epsilon=0.2, decay=False):
+    def __init__(self, actions=None, epsilon=0.2, decay=False):
+        assert epsilon >= 0, "Valore epsilon non valido."
+        assert decay is True or decay is False, "Valore per decay non valido."
         self.epsilon = epsilon
         self.decay = decay
         self.actions = actions
         self.decay_factor = self.epsilon/1000
 
     def compute_action(self, q_list):
+        if(self.actions is None):
+            self.actions = [i for i in range(len(q_list))]
         action = None
         if(random.random() < self.epsilon):
             action = random.choice(self.actions)
