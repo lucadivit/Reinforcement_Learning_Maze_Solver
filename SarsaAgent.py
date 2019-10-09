@@ -3,8 +3,7 @@ import random, time
 
 class SarsaAgent:
 
-    def __init__(self, env, policy, number_of_episodes=100, alpha=0.2, gamma=0.9):
-        assert number_of_episodes > 0, "number_of_episodes non valido"
+    def __init__(self, env, policy, alpha=0.2, gamma=0.9):
         assert alpha >= 0, "alpha non valido"
         assert 0 <= gamma < 1, "gamma non valido"
         self.q_table = {}
@@ -13,7 +12,6 @@ class SarsaAgent:
         self.env = env
         self.actions = [i for i in range(0, self.env.get_action_space().n)]
         self.policy = policy
-        self.nb_episodes = number_of_episodes
 
     def add_q_value(self, state, action, q_value):
         self.q_table[(tuple(state), action)] = q_value
@@ -50,10 +48,11 @@ class SarsaAgent:
     def get_policy(self):
         return self.policy
 
-    def start_training(self, time_between_step=1, time_between_episode=1):
+    def start_training(self, num_of_episodes=100, time_between_step=1, time_between_episode=1):
+        assert num_of_episodes > 0, "number_of_episodes non valido"
         self.env.initialize_env()
         res = []
-        for episode in range(0, self.nb_episodes):
+        for episode in range(0, num_of_episodes):
             rewards = []
             infos = []
             print("Started episode ", episode)
