@@ -1,4 +1,4 @@
-import random, time
+import random, time, pickle, os, ast
 
 
 class SarsaAgent:
@@ -12,6 +12,21 @@ class SarsaAgent:
         self.env = env
         self.actions = [i for i in range(0, self.env.get_action_space().n)]
         self.policy = policy
+
+    def load_stored_q_table(self, file_name):
+        if(os.path.isfile(file_name)):
+            with open(file_name, "rb") as f:
+                self.q_table = pickle.load(f)
+            print("\nQ-Table caricata.\n")
+        else:
+            print("\nFile .pkl non trovato\n")
+
+    def save_q_table(self, file_name):
+        if(not file_name.endswith(".pkl")):
+            file_name = file_name + ".pkl"
+        with open(file_name, 'wb') as f:
+            pickle.dump(self.q_table, f, pickle.HIGHEST_PROTOCOL)
+        print ("\nQ-Table salvata.\n")
 
     def add_q_value(self, state, action, q_value):
         self.q_table[(tuple(state), action)] = q_value
@@ -48,8 +63,9 @@ class SarsaAgent:
     def get_policy(self):
         return self.policy
 
-    def start_training(self, num_of_episodes=100, time_between_step=1, time_between_episode=1):
+    def start_training(self, num_of_episodes=100, time_between_step=1, time_between_episode=1, save_q_table=False, q_table_file_name="sarsa_q_table"):
         assert num_of_episodes > 0, "number_of_episodes non valido"
+        assert type(save_q_table) == bool, "valore per save q table non valido"
         self.env.initialize_env()
         res = []
         for episode in range(0, num_of_episodes):
@@ -71,4 +87,6 @@ class SarsaAgent:
                 infos.append(info)
                 time.sleep(time_between_step)
             res.append([rewards, infos])
+        if(save_q_table is True):
+            self.save_q_table(q_table_file_name)
         return res
