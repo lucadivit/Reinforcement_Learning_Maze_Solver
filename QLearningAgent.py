@@ -3,7 +3,7 @@ import random, time
 
 class QLearningAgent:
 
-    def __init__(self, env,  policy, number_of_episodes, alpha=0.2, gamma=0.9):
+    def __init__(self, env,  policy, number_of_episodes=100, alpha=0.2, gamma=0.9):
         assert number_of_episodes > 0, "number_of_episodes non valido"
         assert alpha >= 0, "alpha non valido"
         assert 0 <= gamma < 1, "gamma non valido"
