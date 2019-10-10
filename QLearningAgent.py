@@ -54,7 +54,7 @@ class QLearningAgent:
         action = self.policy.compute_action(q_list)
         return action
 
-    def start_training(self, num_of_episodes=100, time_between_step=1, time_between_episode=1, save_q_table=False, q_table_file_name="sarsa_q_table"):
+    def start_training(self, num_of_episodes=100, time_between_step=1, time_between_episode=1, save_q_table=False, q_table_file_name="q_learning_q_table"):
         assert num_of_episodes > 0, "number_of_episodes non valido"
         self.env.initialize_env()
         res = []
