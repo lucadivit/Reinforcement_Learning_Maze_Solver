@@ -32,6 +32,7 @@ class MazeEnv(gym.Env):
 
     def initialize_env(self, dimensions = 10, max_steps = 2000, walls_door = 2, player_start_pos = 'standard'):
         assert dimensions >= 5, "La dimensione minima consentita e' 5."
+        assert dimensions <= 250, "La dimensione massima consentita e' 250."
         assert max_steps > 100, "Il minimo numero di passi consentito e' 100."
         assert walls_door >= 1, "Il numero minimo di porte consentito e' 1."
         assert walls_door <= dimensions - 2, "Il massimo numero di porte consentite e' dimensione - 2."
