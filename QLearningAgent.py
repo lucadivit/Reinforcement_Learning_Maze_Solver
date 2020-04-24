@@ -45,7 +45,7 @@ class QLearningAgent:
         learned_value = reward + self.gamma * max_q
         '''Q(s,a)'''
         actual_q_value = self.get_q_value(state, action)
-        '''Q(s,a) + alpha * [R + gamma * max(Q(s',a')) - Q(s,a)]'''
+        '''Q(s,a) + alpha * [R + gamma * max(Q(s',a)) - Q(s,a)]'''
         q_value = actual_q_value + self.alpha * learned_value - self.alpha * actual_q_value
         self.add_q_value(state, action, q_value)
 
